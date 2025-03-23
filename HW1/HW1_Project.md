@@ -36,6 +36,12 @@
 
    - 每個格子內部顯示 **策略方向**（箭頭）及 **數值 \( V(s) \)**。
 
+##### 執行圖片
+![image](https://github.com/user-attachments/assets/2fd6f948-b353-4e60-9319-d47bde676f35)
+![image](https://github.com/user-attachments/assets/bf8a5d2a-86ea-4038-b70c-68a20b5f2f79)
+
+
+
 ---
 
 ## 🏗 背景與理論基礎
@@ -125,7 +131,8 @@ def policy_evaluation(n, start, goal, obstacles, policy):
 | 🟩             | 起點（S）     |
 | 🟥             | 終點（E）     |
 | ⬜             | 可行走區域    |
-| ⬛             | 障礙物        |
+| 🟨             | 走過的區域    |
+| ▒             | 障礙物        |
 | →, ←, ↑, ↓ | 策略方向      |
 | -5.2           | \( V(s) \) 值 |
 
@@ -143,6 +150,10 @@ def policy_evaluation(n, start, goal, obstacles, policy):
 - **加入 Q-Learning 或 SARSA** 以探索更進階的學習方法。
 
 ---
+
+Chatgpt：https://chatgpt.com/share/67daa495-87fc-8010-bf81-92a53a1b9ebf
+https://chatgpt.com/share/67dacbe3-fb58-8010-b2ef-92d32ddd1e1c
+
 
 #### 以下為完整的code:
 
