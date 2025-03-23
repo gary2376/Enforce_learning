@@ -1,1 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Value Iteration Grid</title>
+    <style>
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, 50px);
+            gap: 2px;
+            margin: 20px auto;
+        }
+        .grid div {
+            width: 50px;
+            height: 50px;
+            border: 1px solid #ccc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .start { background-color: green; }
+        .end { background-color: red; }
+        .obstacle { background-color: gray; }
+    </style>
+</head>
+<body>
+    <h1>Value Iteration Grid</h1>
+    <div>
+        <label for="n">Grid Size (n x n): </label>
+        <input type="number" id="n" value="5" min="5" max="9">
+    </div>
+    <div class="controls">
+        <button onclick="generateGrid()">Generate Grid</button>
+        <button onclick="solve()">Solve</button>
+    </div>
+    <div id="grid" class="grid"></div>
+
+    <script>
+        let gridData = [];
+        let start = null;
+        let end = null;
+        let obstacles = [];
+        let V = [];
+        let policy = [];
+
+        function generateGrid() {
+            const n = parseInt(document.getElementById('n').value);
+            gridData = [];
+            obstacles = [];
+            start = null;
+            end = null;
+            const grid = document.getElementById('grid');
+            grid.innerHTML = '';
+            for (let i = 0; i < n; i++) {
+                const row = [];
+                for (let j = 0; j < n; j++) {
+                    const cell = document.createElement('div');
+                    cell.dataset.x = i;
+                    cell.dataset.y = j;
+                    cell.onclick = () => onGridClick(cell, i, j);
+                    grid.appendChild(cell);
+                    row.push(cell);
+                }
+                gridData.push(row);
+            }
+            grid.style.gridTemplateColumns = `repeat(${n}, 50px)`;
+        }
+
+        function onGridClick(cell, i, j) {
+            if (!start) {
+                start = [i, j];
+                cell.classList.add('start');
+                cell.innerText = 'S';
+            } else if (!end) {
+                end = [i, j];
+                cell.classList.add('end');
+                cell.innerText = 'E';
+            } else {
+                if (obstacles.length < gridData.length - 2) {
+                    obstacles.push([i, j]);
+                    cell.classList.add('obstacle');
+                }
+            }
+        }
+
+        function solve() {
+            const n = gridData.length;
+            fetch('/solve', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    n,
+                    start,
+                    goal: end,
+                    obstacles
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                V = data.V;
+                policy = data.policy;
+                displayPolicyAndV();
+            });
+        }
+
+        function displayPolicyAndV() {
+            const n = gridData.length;
+            for (let i = 0; i < n; i++) {
+                for (let j = 0; j < n; j++) {
+                    const cell = gridData[i][j];
+                    if (cell.classList.contains('start') || cell.classList.contains('end') || cell.classList.contains('obstacle')) {
+                        continue;
+                    }
+                    const policyArrow = policy[i][j] ? policy[i][j] : '';
+                    cell.innerText = `${policyArrow}\n${V[i][j]}`;
+                }
+            }
+        }
+    </script>
+</body>
+</html>
 
