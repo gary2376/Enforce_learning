@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Value Iteration Grid</title>
+    <style>
+        /* 重設基本樣式 */
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f7fb;
+            margin: 0;
+            padding: 0;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            color: #333;
+            margin-top: 20px;
+        }
+
+        /* 主容器 */
+        .container {
+            width: 90%;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Grid設計 */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, 50px);
+            gap: 2px;
+            margin: 20px auto;
+            max-width: 90%;
+        }
+
+        .grid div {
+            width: 50px;
+            height: 50px;
+            border: 1px solid #ccc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+            border-radius: 5px;
+        }
+
+        .grid div:hover {
+            transform: scale(1.1);
+        }
+
+        /* 標示不同格子的樣式 */
+        .start { background-color: green; color: white; font-weight: bold; }
+        .end { background-color: red; color: white; font-weight: bold; }
+        .obstacle { background-color: gray; }
+        .path { background-color: yellow; }
+        .current-step { background-color: blue; }
+
+        /* 控制面板的按鈕樣式 */
+        .controls {
+            margin: 20px 0;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .controls button {
+            padding: 12px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            transition: background-color 0.3s ease;
+        }
+
+        .controls button:hover {
+            background-color: #0056b3;
+        }
+
+        .controls button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        /* 輸入框樣式 */
+        .grid-size {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .grid-size input {
+            padding: 5px;
+            font-size: 16px;
+            border-radius: 5px;
+            width: 60px;
+            text-align: center;
+        }
+
+        /* 重新調整對齊方式 */
+        .controls, .grid-size {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Value Iteration Grid</h1>
+        <!-- Grid Size and Controls -->
+        <div class="grid-size">
+            <label for="n" style="font-size: 18px;">Grid Size (n x n): </label>
+            <input type="number" id="n" value="5" min="5" max="9">
+        </div>
+
+        <!-- Buttons -->
+        <div class="controls">
+            <button onclick="generateGrid()">Generate Grid</button>
+            <button onclick="solve()">Solve</button>
+            <button onclick="goBackward()">Go Backward</button>
+            <button onclick="goForward()">Go Forward</button>
+        </div>
+
+        <!-- Grid -->
+        <div id="grid" class="grid"></div>
+    </div>
+
+    <script>
+        let gridData = [];
+        let start = null;
+        let end = null;
+        let obstacles = [];
+        let V = [];
+        let policy = [];
+        let bestPath = [];
+        let currentStep = 0;  // To track the current step in the path
+        let interval = null;  // Interval for automatic step display
+
+        function generateGrid() {
+            const n = parseInt(document.getElementById('n').value);
+            gridData = [];
+            obstacles = [];
+            start = null;
+            end = null;
+            const grid = document.getElementById('grid');
+            grid.innerHTML = '';
+            for (let i = 0; i < n; i++) {
+                const row = [];
+                for (let j = 0; j < n; j++) {
+                    const cell = document.createElement('div');
+                    cell.dataset.x = i;
+                    cell.dataset.y = j;
+                    cell.onclick = () => onGridClick(cell, i, j);
+                    grid.appendChild(cell);
+                    row.push(cell);
+                }
+                gridData.push(row);
+            }
+            grid.style.gridTemplateColumns = `repeat(${n}, 50px)`;
+        }
+
+        function onGridClick(cell, i, j) {
+            if (!start) {
+                start = [i, j];
+                cell.classList.add('start');
+                cell.innerText = 'S';
+            } else if (!end) {
+                end = [i, j];
+                cell.classList.add('end');
+                cell.innerText = 'E';
+            } else {
+                if (obstacles.length < gridData.length - 2) {
+                    obstacles.push([i, j]);
+                    cell.classList.add('obstacle');
+                }
+            }
+        }
+
+        function solve() {
+            const n = gridData.length;
+            fetch('/solve', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    n,
+                    start,
+                    goal: end,
+                    obstacles
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                V = data.V;
+                policy = data.policy;
+                bestPath = data.best_path;  // 接收最佳路徑
+                currentStep = 0;  // Reset to start of the path
+                displayPolicyAndV();
+                clearPreviousPath();
+                startAutomaticPathDisplay();
+            });
+        }
+
+        function displayPolicyAndV() {
+            const n = gridData.length;
+            for (let i = 0; i < n; i++) {
+                for (let j = 0; j < n; j++) {
+                    const cell = gridData[i][j];
+
+                    // 不顯示已標註的格子 (例如：start, end, obstacle)
+                    if (cell.classList.contains('start') || cell.classList.contains('end') || cell.classList.contains('obstacle')) {
+                        continue;
+                    }
+
+                    const policyArrow = policy[i][j] ? policy[i][j] : '';
+                    const valueText = V[i][j] ? V[i][j].toFixed(1) : '';
+
+                    // 顯示箭頭和V值
+                    cell.innerText = `${policyArrow}\n${valueText}`;
+
+                    // 移除路徑標註
+                    cell.classList.remove('path');
+                }
+            }
+        }
+
+        function clearPreviousPath() {
+            // 清除所有標註的格子
+            const n = gridData.length;
+            for (let i = 0; i < n; i++) {
+                for (let j = 0; j < n; j++) {
+                    const cell = gridData[i][j];
+                    cell.classList.remove('path');
+                    cell.classList.remove('current-step');  // 清除當前步驟標註
+                }
+            }
+        }
+
+        function highlightStep() {
+            const n = gridData.length;
+
+            // 清除當前格子的標註
+            for (let i = 0; i < n; i++) {
+                for (let j = 0; j < n; j++) {
+                    const cell = gridData[i][j];
+                    cell.classList.remove('current-step');  // 清除當前步驟標註
+                }
+            }
+
+            // 標註當前步驟
+            const [x, y] = bestPath[currentStep];
+            const cell = gridData[x][y];
+            cell.classList.add('path');  // 標註為黃色
+            cell.classList.add('current-step');
+        }
+
+        function startAutomaticPathDisplay() {
+            interval = setInterval(() => {
+                if (currentStep < bestPath.length) {
+                    highlightStep();
+                    currentStep++;
+                } else {
+                    clearInterval(interval);  // 當路徑顯示完成後停止自動顯示
+                }
+            }, 500);  // 每500毫秒顯示一步
+        }
+
+        // Go to the next step in the path
+        function goForward() {
+            if (currentStep < bestPath.length) {
+                highlightStep();
+                currentStep++;
+            }
+        }
+
+        // Go to the previous step in the path
+        function goBackward() {
+            if (currentStep > 0) {
+                currentStep--;
+                highlightStep();
+            }
+        }
+    </script>
+</body>
+</html>
