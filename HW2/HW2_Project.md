@@ -1,113 +1,122 @@
-# 🏗 HW2: 網格地圖開發與價值函數評估 (Value Function Evaluation)
-
-## 📌 專案目的
-
-本專案的目標是開發一個基於 Flask 的網格地圖應用，讓使用者能夠互動式地設置起點、終點、障礙物，並利用 **價值函數評估 (Value Function Evaluation)** 方法計算每個格子的價值函數 \( V(s) \) 及對應策略。
-
-本專案包含兩個主要部分：
-
-1. **HW1-1: 網格地圖開發**
-   - 使用者可設定網格大小 \( n \times n \)（\( 5 \leq n \leq 9 \)）。
-   - 點擊設定 **起始點（綠色）**、**終點（紅色）**、**障礙物（灰色）**。
-2. **HW1-2: 策略顯示與價值函數評估**
-   - 針對每個格子，顯示隨機策略（上下左右）。
-   - 計算價值函數 \( V(s) \) 來評估各格子的重要性。
-
+---
+title: "Grid Navigation 強化學習專案完整指南"
+tags: ["Reinforcement Learning", "Value Iteration", "Flask", "Grid Navigation"]
 ---
 
-## 🚀 專案執行流程
+# **Grid Navigation 強化學習專案完整指南**
+> 透過 **值迭代 (Value Iteration)** 演算法來求解最佳路徑，並以 Flask 及 JavaScript 視覺化顯示最佳策略與狀態值。
 
-1. **伺服器啟動**
-   - 啟動 Flask 伺服器，載入 `index.html` 作為前端界面。
-2. **使用者互動**
-   - 使用者可選擇網格大小 \( n \) 並點擊 **「Generate Grid」** 生成網格。
-   - 透過滑鼠點擊設定 **起點**（S）、**終點**（E）、**障礙物**。
-   - 點擊 **「Solve」** 來計算策略與價值函數。
-3. **伺服器計算**
-   - 生成隨機策略。
-   - 進行 **價值函數評估 (Value Function Evaluation)** 來計算 \( V(s) \)。
-   - 回傳策略箭頭與價值函數結果。
-4. **網頁顯示結果**
-   - 每個格子內部顯示 **策略方向**（箭頭）及 **數值 \( V(s) \)**。
+## **📌 1. 專案概述**
+### **1.1 目標**
+本專案的目標是使用 **強化學習 (Reinforcement Learning)** 的 **值迭代 (Value Iteration)** 方法，讓代理人（Agent）學會在網格 (Grid) 環境中找到最佳路徑，以最小的步數抵達目標點。
 
----
+### **1.2 應用場景**
+- **機器人導航**：機器人可以學習如何在迷宮中找到最佳移動策略。
+- **遊戲 AI**：讓 NPC 自主學習如何走向目標。
+- **物流與路徑規劃**：如智慧倉儲機器人的最佳行走規劃。
+- **智慧交通**：規劃城市道路中的最短通行時間。
 
-## 🏗 背景與理論基礎
+## **📚 2. 知識背景**
+### **2.1 強化學習概念**
+**強化學習 (Reinforcement Learning, RL)** 是機器學習的一個領域，透過與環境的互動來學習最優策略。核心概念：
+- **狀態 (State, S)**：當前的環境，如棋盤的位置。
+- **行動 (Action, A)**：在狀態 S 下可執行的操作，如上下左右移動。
+- **獎勵 (Reward, R)**：執行動作後得到的回饋，如是否接近目標。
+- **策略 (Policy, π)**：決定在某個狀態下該如何行動。
+- **價值函數 (Value Function, V(s))**：衡量某狀態下的長期獎勵。
 
-### 🎯 **強化學習與價值函數**
+### **2.2 值迭代 (Value Iteration)**
+值迭代是一種動態規劃 (Dynamic Programming) 方法，透過 **貝爾曼方程 (Bellman Equation)** 不斷更新狀態價值，直到收斂：
 
-本專案採用 **價值函數 (Value Function)** 的概念來評估每個狀態的價值。價值函數 \( V(s) \) 表示從某個狀態 \( s \) 開始，依照當前策略執行動作時，期望獲得的累積報酬。
+\[
+V(s) = \max_a \sum_{s'} P(s' | s, a) [R(s, a, s') + \gamma V(s')]
+\]
 
-價值函數的更新方式如下：
-\(
-V(s) = R(s) + \gamma \sum P(s'|s, a) V(s')
-\)
 其中：
+- \( V(s) \) 是狀態 \( s \) 的價值。
+- \( P(s' | s, a) \) 是執行動作 \( a \) 後轉移到狀態 \( s' \) 的機率。
+- \( R(s, a, s') \) 是即時獎勵。
+- \( \gamma \) 是 **折扣因子 (Discount Factor)**，控制未來獎勵的影響力。
 
-- \( R(s) \) 為當前狀態的即時回報 (reward)。
-- \( \gamma \) 是折扣因子 (discount factor)。
-- \( P(s'|s, a) \) 是從狀態 \( s \) 採取動作 \( a \) 轉移到新狀態 \( s' \) 的機率。
-- \( V(s') \) 是新狀態的價值。
+## **🔧 3. 系統架構**
+### **3.1 Flask 後端**
+後端 Flask 負責計算 Grid 環境的最佳路徑，並提供 API：
+- **`/solve`**：接收網格大小、起點、終點、障礙物，回傳最佳路徑與策略。
 
-### 🤖 **動態規劃與策略評估**
+### **3.2 前端視覺化**
+前端透過 JavaScript 及 CSS 建立互動式 Grid，並動態顯示：
+- **最佳行動策略**
+- **各狀態的價值 (V-value)**
+- **最佳移動路徑**
 
-我們使用 **動態規劃 (Dynamic Programming)** 方法來評估策略的好壞，透過 **價值函數評估 (Value Function Evaluation)** 來收斂至最優值。
+## **💻 4. 操作方式**
+### **4.1 設定 Grid 環境**
+1. **選擇 Grid 大小** (最小 5x5, 最大 9x9)。
+2. **點擊設定**：
+   - **第一個點擊：設定起點 (S)**
+   - **第二個點擊：設定終點 (E)**
+   - **後續點擊：設定障礙物 (黑色格子)**
+
+### **4.2 執行值迭代演算法**
+1. 點擊 **「Solve」**，後端會計算最佳策略。
+2. 前端更新：
+   - 各格子的 **價值 V(s)**
+   - **最佳策略箭頭**
+   - **標示最佳路徑**
+
+## **📜 5. 程式碼解析**
+### **5.1 Flask 後端 (`app.py`)**
+#### **(1) 定義 Grid 環境**
+```python
+gamma = 0.9  # 折扣因子
+theta = 0.0001  # 收斂標準
+actions = ['U', 'D', 'L', 'R']
+action_map = {'U': (-1, 0), 'D': (1, 0), 'L': (0, -1), 'R': (0, 1)}
+```
+
+#### **(2) 值迭代計算**
+```python
+def value_iteration(n, start, goal, obstacles):
+    V = np.zeros((n, n))  # 初始化價值函數
+    while True:
+        delta = 0
+        new_V = V.copy()
+        for i in range(n):
+            for j in range(n):
+                if (i, j) == goal or (i, j) in obstacles:
+                    continue
+                action_values = []
+                for action in actions:
+                    di, dj = action_map[action]
+                    ni, nj = i + di, j + dj
+                    if 0 <= ni < n and 0 <= nj < n and (ni, nj) not in obstacles:
+                        action_values.append(-1 + gamma * V[ni, nj])
+                    else:
+                        action_values.append(-1 + gamma * V[i, j])
+                new_V[i, j] = max(action_values)
+                delta = max(delta, abs(V[i, j] - new_V[i, j]))
+        V = new_V.copy()
+        if delta < theta:
+            break
+    return V
+```
+
+#### **(3) Flask API**
+```python
+@app.route('/solve', methods=['POST'])
+def solve():
+    data = request.json
+    V = value_iteration(data['n'], tuple(data['start']), tuple(data['goal']), set(tuple(obstacle) for obstacle in data['obstacles']))
+    return jsonify({'V': V.tolist()})
+```
+
+## **🚀 6. 未來擴展**
+- **Q-learning / DQN 強化學習方法**
+- **動態障礙物場景**
+- **3D 環境導航**
 
 ---
+## 完整code
+'''python
 
-## 📝 程式碼結構
-
-本專案主要由 Flask 伺服器 (`app.py`) 及前端 (`index.html`) 組成。
-
-### 🔹 Flask 伺服器 (`app.py`)
-
-負責計算策略與價值函數，提供 API。
-
-### 🔹 價值函數評估 (`policy_evaluation`)
-
-透過動態規劃方法計算每個狀態的價值。
-
----
-
-## 📊 結果示範
-
-| 格子           | 內容          |
-| -------------- | ------------- |
-| 🟩             | 起點（S）     |
-| 🟥             | 終點（E）     |
-| ⬜             | 可行走區域    |
-| 🟨             | 走過的區域    |
-| ▒             | 障礙物        |
-| →, ←, ↑, ↓ | 策略方向      |
-| -5.2           | \( V(s) \) 值 |
-
----
-
-## 🏆 結論
-
-本專案透過 **Flask + JavaScript** 搭建了一個網格環境，並利用 **價值函數評估 (Value Function Evaluation)** 方法計算價值函數 \( V(s) \)。
-
-🔥 **下一步優化**：
-
-- **動態策略改進**（策略迭代）。
-- **加入隨機動作機率**（馬可夫決策過程 MDP）。
-- **改進 UI 顯示，增加動畫效果**。
-- **加入 Q-Learning 或 SARSA** 以探索更進階的學習方法。
-
----
-
-## 🚀 未來改進計劃
-
-✅ **1. 增加策略迭代與增強學習技術**  
-✅ **2. 支援 Dijkstra 演算法，讓使用者可以選擇不同求解方法**  
-✅ **3. 增加 GUI 介面，提高易用性**  
-✅ **4. 支援更大規模的環境，例如迷宮、複雜地圖**  
-
----
-
-## 🎯 結論
-
-本專案透過 **Flask + JavaScript**，讓使用者能夠 **直觀地學習強化學習與最佳路徑演算法**。
-
-🚀 **適用於機器人導航、遊戲 AI、自動駕駛、物流路徑規劃等應用！** 🎯
-
+'''
