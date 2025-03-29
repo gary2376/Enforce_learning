@@ -4,7 +4,10 @@ tags: ["Reinforcement Learning", "Value Iteration", "Flask", "Grid Navigation"]
 ---
 
 # **Grid Navigation 強化學習專案完整指南**
-> 透過 **值迭代 (Value Iteration)** 演算法來求解最佳路徑，並以 Flask 及 JavaScript 視覺化顯示最佳策略與狀態值。
+> 透過 **值迭代 (Value Iteration)** 演算法來求解最佳路徑，並以 Flask 及 JavaScript 視覺化顯示最佳策略與狀態值。本專案實作了一個基於 Flask (Python) 的 Value Iteration Grid 系統，主要應用
+於 最短路徑尋找 及 決策規劃。該系統透過 強化學習 (Reinforcement
+Learning) 的值迭代 (Value Iteration) 演算法，在網格環境中計算最佳行動策
+略，並視覺化顯示 狀態價值函數 V(s) 及最佳行動策略 (policy)。
 
 ## **📌 1. 專案概述**
 ### **1.1 目標**
@@ -38,24 +41,61 @@ V(s) = \max_a \sum_{s'} P(s' | s, a) [R(s, a, s') + \gamma V(s')]
 - \( R(s, a, s') \) 是即時獎勵。
 - \( \gamma \) 是 **折扣因子 (Discount Factor)**，控制未來獎勵的影響力。
 
-## 🚀 專案執行流程
+**基於 Value Iteration 的網格最佳路徑求解系統**
+## **系統架構**
+本系統由 **前端 (HTML + JavaScript)** 和 **後端 (Flask + Python)** 組成。
 
-1. **伺服器啟動**
+### **前端 (index.html)**
+- 產生 **n × n** 的網格環境 (**範圍 5≤n≤9**)。
+- 使用者可點擊設定：
+  - **起點 (S)** - 綠色
+  - **終點 (E)** - 紅色
+  - **障礙物** - 灰色
+- 透過 AJAX 呼叫 Flask API (**/solve**) 計算 **最佳策略**。
+- 支援 **「逐步前進 / 回退顯示」最佳路徑**。
 
-   - 啟動 Flask 伺服器，載入 `index.html` 作為前端界面。
-2. **使用者互動**
+### **後端 (app.py)**
+- 透過 **值迭代演算法 (Value Iteration Algorithm)** 計算：
+  - **每個格子的價值函數 V(s)**
+  - **最佳行動策略 (policy)**
+  - **最佳行進路徑 (best_path)**
 
-   - 使用者可選擇網格大小 \( n \) 並點擊 **「Generate Grid」** 生成網格。
-   - 透過滑鼠點擊設定 **起點**（S）、**終點**（E）、**障礙物**。
-   - 點擊 **「Solve」** 來計算策略與價值函數。
-3. **伺服器計算**
+---
+## **功能詳解**
 
-   - 生成隨機策略。
-   - 進行 **價值函數評估 (Value Function Evaluation)** 來計算 \( V(s) \)。
-   - 回傳策略箭頭與價值函數結果。
-4. **網頁顯示結果**
+### **1. 產生 n × n 網格**
+- 使用者可選擇 **網格大小 (5 ≤ n ≤ 9)**。
+- 每個格子代表一個狀態 (**state**)：
+  - **S (Start) 起點** → 綠色
+  - **E (End) 終點** → 紅色
+  - **障礙物 (Obstacles)** → 灰色
+  - **最佳行進路徑 (Best Path)** → 黃色
+  - **當前步驟 (Current Step)** → 藍色
 
-   - 每個格子內部顯示 **策略方向**（箭頭）及 **數值 \( V(s) \)**。
+### **2. 設定環境**
+- **第一個點擊**：設定 **起點 (S)** → 綠色。
+- **第二個點擊**：設定 **終點 (E)** → 紅色。
+- **其他點擊**：設定 **障礙物**，可設多個。
+- **按下 Generate Grid**：清除網格並重新設定。
+
+### **3. 執行 Value Iteration**
+- **按下 Solve 按鈕**，前端會發送請求至 Flask 後端 (**/solve**)。
+- 後端運行 **Value Iteration** 計算：
+  - **每個格子的價值函數 V(s)**。
+  - **最佳策略 (policy)**：每個格子該往哪裡移動 (**↑ ↓ ← →**)。
+  - **最佳路徑 (best_path)**：**起點 → 終點** 的最短路徑。
+
+### **4. 顯示最佳策略**
+- 每個格子會顯示：
+  - **最佳行動（方向箭頭 ↑ ↓ ← →）**。
+  - **價值函數 V(s)**（顯示為數字）。
+
+### **5. 路徑逐步顯示**
+- **按下 Go Forward** → 按一次，顯示下一步，標記為 **藍色 (current-step)**。
+- **按下 Go Backward** → 按一次，回到前一步，標記為 **藍色 (current-step)**。
+- **所有已走過的步驟仍保持 path (黃色)**，確保視覺化完整。
+
+
 
 ##### 執行圖片
 ![image](https://github.com/user-attachments/assets/c0575fe5-0906-405b-af76-e6c98d61f218)
