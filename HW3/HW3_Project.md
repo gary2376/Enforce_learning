@@ -38,10 +38,11 @@ class EpsilonGreedy:
         self.k = k_arm
         self.epsilon = epsilon
         self.steps = steps
-        self.q_true = np.random.normal(0, 1, k_arm)
-        self.q_est = np.zeros(k_arm)
-        self.action_count = np.zeros(k_arm)
+        self.q_true = np.random.normal(0, 1, k_arm)  # True expected values of each arm
+        self.q_est = np.zeros(k_arm)                # Estimated values of each arm
+        self.action_count = np.zeros(k_arm)         # Number of times each arm was selected
         self.rewards = []
+        self.actions = []
 
     def select_action(self):
         if np.random.rand() < self.epsilon:
@@ -55,22 +56,53 @@ class EpsilonGreedy:
             self.action_count[action] += 1
             self.q_est[action] += (reward - self.q_est[action]) / self.action_count[action]
             self.rewards.append(reward)
-        return self.rewards
+            self.actions.append(action)
+        return self.rewards, self.actions
 
-# 執行與繪圖
+# Compute convergence using moving average
+def compute_convergence_step(reward_list, threshold_ratio=0.95, window_size=50):
+    moving_avg = np.convolve(reward_list, np.ones(window_size)/window_size, mode='valid')
+    max_avg = np.max(moving_avg)
+    threshold = threshold_ratio * max_avg
+    for i, val in enumerate(moving_avg):
+        if val >= threshold:
+            return i + window_size
+    return len(reward_list)
+
+# Run experiment
 np.random.seed(0)
 agent = EpsilonGreedy(epsilon=0.1)
-rewards = agent.run()
-cumulative_rewards = np.cumsum(rewards)
+rewards, actions = agent.run()
 
-plt.plot(cumulative_rewards)
-plt.title("Epsilon-Greedy: cumulative rewards")
-plt.xlabel("steps")
-plt.ylabel("accumulated reward")
-plt.grid()
+# Compute average rewards and convergence step
+avg_rewards = np.cumsum(rewards) / (np.arange(len(rewards)) + 1)
+convergence_step = compute_convergence_step(rewards)
+
+# Plot with subplots
+fig, axs = plt.subplots(2, 1, figsize=(10, 8))
+
+# Subplot 1: Average reward
+axs[0].plot(avg_rewards, label="Average Reward")
+axs[0].axvline(convergence_step, color='red', linestyle='--', label=f"Convergence ≈ {convergence_step}")
+axs[0].set_title("Epsilon-Greedy: Average Reward and Convergence")
+axs[0].set_xlabel("Steps")
+axs[0].set_ylabel("Average Reward")
+axs[0].legend()
+axs[0].grid(True)
+
+# Subplot 2: Arm selection count
+axs[1].bar(np.arange(agent.k), agent.action_count)
+axs[1].set_title("Epsilon-Greedy: Arm Selection Count")
+axs[1].set_xlabel("Arm")
+axs[1].set_ylabel("Number of Times Selected")
+axs[1].grid(axis='y')
+
+plt.tight_layout()
 plt.show()
+
 ```
-![image](https://github.com/user-attachments/assets/673f61c2-888e-4a02-8832-c9913088b157)
+![image](https://github.com/user-attachments/assets/292895ff-6522-4c95-ad1d-975d288107ba)
+
 
 ---
 
@@ -109,9 +141,6 @@ UCB 演算法基於樂觀初始原則（Optimism in the Face of Uncertainty）�
 ### (3) 程式碼與圖表（Python + Matplotlib）
 
 ```python
-import numpy as np
-import matplotlib.pyplot as plt
-
 class UCB:
     def __init__(self, k_arm=10, c=2, steps=1000):
         self.k = k_arm
@@ -121,9 +150,12 @@ class UCB:
         self.q_est = np.zeros(k_arm)
         self.action_count = np.zeros(k_arm)
         self.rewards = []
+        self.actions = []
 
     def select_action(self, t):
-        ucb_values = self.q_est + self.c * np.sqrt(np.log(t + 1) / (self.action_count + 1e-5))
+        if 0 in self.action_count:
+            return np.argmin(self.action_count)
+        ucb_values = self.q_est + self.c * np.sqrt(np.log(t + 1) / self.action_count)
         return np.argmax(ucb_values)
 
     def run(self):
@@ -133,23 +165,20 @@ class UCB:
             self.action_count[action] += 1
             self.q_est[action] += (reward - self.q_est[action]) / self.action_count[action]
             self.rewards.append(reward)
-        return self.rewards
+            self.actions.append(action)
+        return self.rewards, self.actions
 
-# 執行與繪圖
-np.random.seed(0)
-agent = UCB(c=2)
-rewards = agent.run()
-cumulative_rewards = np.cumsum(rewards)
+np.random.seed(1)
+agent = UCB()
+rewards, actions = agent.run()
+avg_rewards = np.cumsum(rewards) / (np.arange(len(rewards)) + 1)
+convergence_step = compute_convergence_step(rewards)
+plot_results(avg_rewards, convergence_step, agent.action_count, "UCB")
 
-plt.plot(cumulative_rewards)
-plt.title("UCB: cumulative rewards")
-plt.xlabel("steps")
-plt.ylabel("accumulated reward")
-plt.grid()
-plt.show()
 
 ```
-![image](https://github.com/user-attachments/assets/3d8831d3-2e90-4c83-a29d-14f82cc25580)
+![image](https://github.com/user-attachments/assets/fa3bcfb8-7b13-4ea6-a271-473caaed1811)
+
 
 ---
 
@@ -189,9 +218,6 @@ Softmax 演算法使用機率性選擇動作，每個動作被選擇的機率與
 ### (3) 程式碼與圖表（Python + Matplotlib）
 
 ```python
-import numpy as np
-import matplotlib.pyplot as plt
-
 class Softmax:
     def __init__(self, k_arm=10, tau=0.1, steps=1000):
         self.k = k_arm
@@ -201,13 +227,11 @@ class Softmax:
         self.q_est = np.zeros(k_arm)
         self.action_count = np.zeros(k_arm)
         self.rewards = []
-
-    def softmax_prob(self):
-        exp_est = np.exp(self.q_est / self.tau)
-        return exp_est / np.sum(exp_est)
+        self.actions = []
 
     def select_action(self):
-        probs = self.softmax_prob()
+        exp_est = np.exp(self.q_est / self.tau)
+        probs = exp_est / np.sum(exp_est)
         return np.random.choice(self.k, p=probs)
 
     def run(self):
@@ -217,22 +241,18 @@ class Softmax:
             self.action_count[action] += 1
             self.q_est[action] += (reward - self.q_est[action]) / self.action_count[action]
             self.rewards.append(reward)
-        return self.rewards
+            self.actions.append(action)
+        return self.rewards, self.actions
 
-# 執行與繪圖
-np.random.seed(0)
+np.random.seed(2)
 agent = Softmax(tau=0.1)
-rewards = agent.run()
-cumulative_rewards = np.cumsum(rewards)
+rewards, actions = agent.run()
+avg_rewards = np.cumsum(rewards) / (np.arange(len(rewards)) + 1)
+convergence_step = compute_convergence_step(rewards)
+plot_results(avg_rewards, convergence_step, agent.action_count, "Softmax")
 
-plt.plot(cumulative_rewards)
-plt.title("Softmax: 累積獎勵")
-plt.xlabel("步驟")
-plt.ylabel("累積獎勵")
-plt.grid()
-plt.show()
 ```
-![image](https://github.com/user-attachments/assets/490b699b-edf3-48b2-9aa2-29aa962edf33)
+![image](https://github.com/user-attachments/assets/7a519d9d-aa3e-4577-b237-0fbf7e546192)
 
 ---
 
@@ -279,45 +299,42 @@ Thompson Sampling 是一種基於貝葉斯推論的策略，它為每個動作�
 ### (3) 程式碼與圖表（Python + Matplotlib）
 
 ```python
-import numpy as np
-import matplotlib.pyplot as plt
-
 class ThompsonSampling:
     def __init__(self, k_arm=10, steps=1000):
         self.k = k_arm
         self.steps = steps
-        self.q_true = np.random.beta(2, 2, k_arm)  # 真實機率（0~1）
+        self.q_true = np.random.normal(0, 1, k_arm)
         self.alpha = np.ones(k_arm)
         self.beta = np.ones(k_arm)
         self.rewards = []
+        self.actions = []
+        self.action_count = np.zeros(k_arm)
 
     def select_action(self):
-        theta = np.random.beta(self.alpha, self.beta)
-        return np.argmax(theta)
+        samples = np.random.beta(self.alpha, self.beta)
+        return np.argmax(samples)
 
     def run(self):
         for _ in range(self.steps):
             action = self.select_action()
-            reward = np.random.binomial(1, self.q_true[action])  # 獎勵為 0 或 1
-            self.alpha[action] += reward
-            self.beta[action] += 1 - reward
+            reward = np.random.normal(self.q_true[action], 1)
+            # Convert to Bernoulli for simplicity
+            reward_binary = 1 if reward > 0 else 0
+            self.alpha[action] += reward_binary
+            self.beta[action] += 1 - reward_binary
             self.rewards.append(reward)
-        return self.rewards
+            self.actions.append(action)
+            self.action_count[action] += 1
+        return self.rewards, self.actions
 
-# 執行與繪圖
-np.random.seed(0)
+np.random.seed(3)
 agent = ThompsonSampling()
-rewards = agent.run()
-cumulative_rewards = np.cumsum(rewards)
-
-plt.plot(cumulative_rewards)
-plt.title("Thompson Sampling: 累積獎勵")
-plt.xlabel("步驟")
-plt.ylabel("累積獎勵")
-plt.grid()
-plt.show()
+rewards, actions = agent.run()
+avg_rewards = np.cumsum(rewards) / (np.arange(len(rewards)) + 1)
+convergence_step = compute_convergence_step(rewards)
+plot_results(avg_rewards, convergence_step, agent.action_count, "Thompson Sampling")
 ```
-![image](https://github.com/user-attachments/assets/72ae3bf6-0020-474c-84a3-c9a05c3859f5)
+![image](https://github.com/user-attachments/assets/d551f7c8-47ef-4290-8883-21d36f26629b)
 
 ---
 
