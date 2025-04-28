@@ -58,7 +58,7 @@ class DQN(nn.Module):
 ```
 
 ## 訓練結果與曲線
-![](1edbe2c9-7eff-44cf-81fc-8f447f7cfe31.png)
+![image](https://github.com/user-attachments/assets/36cc2f17-4346-4fb0-9a86-ae6479ded704)
 
 - 起初 reward 波動大
 - 隨訓練次數增加，reward 趨於上升
@@ -109,7 +109,7 @@ def forward(self, x):
 ```
 
 ## 訓練結果比較與曲線
-![](d80e846c-76c2-4bf3-8716-0911fdb29db5.png)
+![image](https://github.com/user-attachments/assets/321d77b8-5c7c-4e67-adda-09d1bb3c54ae)
 
 - Double DQN 表現穩定，Dueling DQN 初期收斂速度較快
 - Dueling Q-learning 在 early exploration 特別有效
@@ -150,7 +150,7 @@ self.optimizer.step()
 ```
 
 ## 訓練結果比較與曲線
-![](50ad5473-380e-4fa5-9477-36242673afe3.png)
+![image](https://github.com/user-attachments/assets/4c1a08b4-bc09-4e15-8234-ac8a0c15e80f)
 
 - Double DQN 在 high-variance 隨機環境中表現較穩
 - Dueling DQN early learning 稍微更快，但中期震盪較大
