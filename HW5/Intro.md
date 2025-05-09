@@ -1,7 +1,7 @@
 
 # FinRL 股票交易強化學習實踐 - 投資組合分配
 
-專案 Notebook 連結: [FinRL Portfolio Allocation](https://colab.research.google.com/github/AI4Finance-LLC/FinRL-Library/blob/master/FinRL_portfolio_allocation.ipynb)
+專案 Notebook 連結: [FinRL Portfolio Allocation](https://arxiv.org/abs/2011.09607)
 
 ## 1. 專案概述
 
